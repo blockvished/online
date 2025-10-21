@@ -2,278 +2,182 @@
 
 import React, { useState } from "react";
 import { useAccount, useWalletClient } from "wagmi";
-import lighthouse from "@lighthouse-web3/sdk";
-import FileUpload from "./FileUpload";
+import { getSignedMessage, uploadEncryptedFile } from "@/lib/lighthouse";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
+  Loader2,
+  UploadCloud,
+  CheckCircle,
+  XCircle,
+  FileIcon,
+} from "lucide-react";
 
-const LighthouseControls = () => {
-  // State for inputs and feedback
-  const [cid, setCid] = useState<string>("");
-  const [shareToAddress, setShareToAddress] = useState<string>("");
-  const [statusMessage, setStatusMessage] = useState<string>("");
-  const [decryptedFileUrl, setDecryptedFileUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  // Wagmi hooks
-  const { address: userAddress } = useAccount();
+export default function UploadPage() {
+  const { address: userAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
-  // --- Utility Function (Used for Upload, Share, and Decrypt) ---
-  const getSignedMessage = async (): Promise<string | undefined> => {
-    if (!userAddress || !walletClient) {
-      setStatusMessage("Wallet not connected.");
-      return;
-    }
-    try {
-      // ⚠️ Use lighthouse.getAuthMessage as intended
-      const messageToSign = (await lighthouse.getAuthMessage(userAddress)).data
-        .message;
-      const signedMessage = await walletClient.signMessage({
-        account: userAddress,
-        message: messageToSign,
-      });
-      return signedMessage;
-    } catch (error) {
-      console.error("Error signing message:", error);
-      setStatusMessage("Failed to sign message. Please try again.");
-      return;
-    }
+  const [file, setFile] = useState<File | null>(null);
+  const [cid, setCid] = useState<string>("");
+  const [status, setStatus] = useState<string>("");
+  const [progress, setProgress] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setFile(files[0]);
+    setCid("");
+    setStatus("");
+    setError("");
+    setProgress(0);
   };
 
-  // --- Callback Function ---
-  const handleUploadSuccess = (uploadedCid: string) => {
-    setCid(uploadedCid);
-    setStatusMessage("CID has been set from your recent upload.");
-  };
-
-  // --- Core Functions (Share & Decrypt - Unchanged logic, rely on fixed getSignedMessage) ---
-
-  const handleShareFile = async () => {
-    if (!cid || !shareToAddress) {
-      setStatusMessage("Please provide both a CID and a recipient address.");
-      return;
-    }
-    if (!userAddress) {
-      setStatusMessage("Please connect your wallet first.");
+  const handleUpload = async () => {
+    if (!isConnected || !userAddress || !walletClient) {
+      setError("Please connect your wallet before uploading.");
       return;
     }
 
-    setIsLoading(true);
-    setDecryptedFileUrl(null);
-    setStatusMessage("Preparing to share... Please sign the message.");
+    if (!file) {
+      setError("Please choose a file first.");
+      return;
+    }
 
     try {
-      const signedMessage = await getSignedMessage();
-      if (!signedMessage) {
-        setIsLoading(false);
-        return;
-      }
+      setError("");
+      setLoading(true);
+      setStatus("Signing message...");
+      setProgress(10);
 
-      setStatusMessage("Sharing file access...");
-      // The sharedTo address must be an array of public keys
-      const shareResponse = await lighthouse.shareFile(
+      const signedMsg = await getSignedMessage(userAddress, walletClient);
+
+      setStatus("Uploading encrypted file...");
+      const cid = await uploadEncryptedFile(
+        [file],
         userAddress,
-        [shareToAddress],
-        cid,
-        signedMessage,
+        signedMsg,
+        (progress) => {
+          const percent = Math.round(
+            (progress.uploaded / progress.total) * 100,
+          );
+          setProgress(percent);
+          setStatus(`Uploading... ${percent}%`);
+        },
       );
 
-      console.log("Share response:", shareResponse);
-      setStatusMessage(
-        `✅ Success! Shared ${shareResponse.data.cid} with ${shareToAddress}.`,
-      );
-    } catch (error) {
-      console.error("Error sharing file:", error);
-      setStatusMessage("❌ Error sharing file. Check the console for details.");
+      setCid(cid);
+      setStatus("Upload complete!");
+      setProgress(100);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Something went wrong.");
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDecryptFile = async () => {
-    if (!cid) {
-      setStatusMessage("Please provide a CID to decrypt.");
-      return;
-    }
-    if (!userAddress) {
-      setStatusMessage("Please connect your wallet first.");
-      return;
-    }
-
-    setIsLoading(true);
-    setDecryptedFileUrl(null);
-    setStatusMessage("Preparing to decrypt... Please sign the message.");
-
-    try {
-      const signedMessage = await getSignedMessage();
-      if (!signedMessage) {
-        setIsLoading(false);
-        return;
-      }
-
-      setStatusMessage("Fetching decryption key...");
-      const fileEncryptionKey = await lighthouse.fetchEncryptionKey(
-        cid,
-        userAddress,
-        signedMessage,
-      );
-
-      setStatusMessage("Key fetched! Decrypting file...");
-      const decryptedFile = await lighthouse.decryptFile(
-        cid,
-        fileEncryptionKey.data.key as string,
-      );
-
-      const fileUrl = URL.createObjectURL(decryptedFile);
-      setDecryptedFileUrl(fileUrl);
-      setStatusMessage(`✅ File decrypted successfully!`);
-    } catch (error) {
-      console.error("Error decrypting file:", error);
-      setStatusMessage(
-        "❌ Decryption failed. You may not have access to this file, or the key is invalid.",
-      );
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        fontFamily: "Arial, sans-serif",
-        maxWidth: "600px",
-        margin: "auto",
-        padding: "20px",
-        border: "1px solid #ccc",
-        borderRadius: "8px",
-      }}
-    >
-      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
-        Lighthouse Storage Manager
-      </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-900 px-4">
+      <Card className="w-full max-w-md shadow-lg border border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-center flex items-center justify-center gap-2 text-gray-800">
+            <UploadCloud className="w-5 h-5 text-indigo-500" />
+            Secure Encrypted Upload
+          </CardTitle>
+        </CardHeader>
 
-      {/* --- PASS THE SIGNING FUNCTION TO THE UPLOAD COMPONENT --- */}
-      <FileUpload
-        onUploadSuccess={handleUploadSuccess}
-        getSignedMessage={getSignedMessage}
-      />
+        <CardContent className="space-y-5">
+          {!isConnected ? (
+            <p className="text-center text-sm text-gray-500">
+              Please connect your wallet to continue.
+            </p>
+          ) : (
+            <div className="flex flex-col items-center space-y-4">
+              <label
+                htmlFor="file"
+                className="w-full flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl p-6 cursor-pointer hover:border-indigo-400 transition"
+              >
+                <input
+                  id="file"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+                {file ? (
+                  <div className="flex flex-col items-center space-y-2">
+                    <FileIcon className="w-6 h-6 text-indigo-500" />
+                    <span className="text-sm font-medium text-gray-700">
+                      {file.name}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center space-y-2 text-gray-500">
+                    <UploadCloud className="w-6 h-6 text-indigo-400" />
+                    <span className="text-sm font-medium">
+                      Click to choose a file
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      (max 100MB recommended)
+                    </span>
+                  </div>
+                )}
+              </label>
 
-      <div
-        style={{
-          marginTop: "2rem",
-          padding: "1.5rem",
-          border: "1px solid #ddd",
-          borderRadius: "8px",
-        }}
-      >
-        <h3 style={{ marginTop: 0 }}>2. Share or Decrypt File</h3>
-        {/* ... (rest of the inputs and buttons remain the same) ... */}
-        <div style={{ marginBottom: "15px" }}>
-          <label
-            htmlFor="cid-input"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            File CID:
-          </label>
-          <input
-            id="cid-input"
-            type="text"
-            value={cid}
-            onChange={(e) => setCid(e.target.value)}
-            placeholder="Upload a file above or enter a CID manually"
-            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
-          />
-        </div>
+              <Button
+                onClick={handleUpload}
+                disabled={!file || loading}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />{" "}
+                    Uploading...
+                  </>
+                ) : (
+                  "Encrypt & Upload"
+                )}
+              </Button>
 
-        <div style={{ marginBottom: "20px" }}>
-          <label
-            htmlFor="share-to-input"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            Share To Address (Optional):
-          </label>
-          <input
-            id="share-to-input"
-            type="text"
-            value={shareToAddress}
-            onChange={(e) => setShareToAddress(e.target.value)}
-            placeholder="Enter the recipient's 0x... address"
-            style={{ width: "100%", padding: "8px", boxSizing: "border-box" }}
-          />
-        </div>
+              {status && (
+                <p className="text-sm text-gray-600 text-center">{status}</p>
+              )}
 
-        {/* --- Action Buttons --- */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-around",
-            marginBottom: "20px",
-          }}
-        >
-          <button
-            onClick={handleShareFile}
-            disabled={isLoading || !userAddress || !shareToAddress || !cid}
-            style={buttonStyle(
-              isLoading || !userAddress || !shareToAddress || !cid,
-            )}
-          >
-            {isLoading ? "Sharing..." : "Share Access"}
-          </button>
-          <button
-            onClick={handleDecryptFile}
-            disabled={isLoading || !userAddress || !cid}
-            style={buttonStyle(isLoading || !userAddress || !cid)}
-          >
-            {isLoading ? "Decrypting..." : "Decrypt File"}
-          </button>
-        </div>
-      </div>
+              {loading && (
+                <Progress value={progress} className="w-full h-2 bg-gray-200" />
+              )}
 
-      {/* --- Status & Output --- */}
-      {statusMessage && (
-        <div
-          style={{
-            marginTop: "1.5rem",
-            padding: "10px",
-            backgroundColor: "#f0f0f0",
-            borderRadius: "4px",
-            textAlign: "center",
-          }}
-        >
-          <p>{statusMessage}</p>
-        </div>
-      )}
+              {error && (
+                <div className="flex items-center gap-2 text-red-500 text-sm">
+                  <XCircle className="w-4 h-4" /> {error}
+                </div>
+              )}
 
-      {decryptedFileUrl && (
-        <div style={{ textAlign: "center", marginTop: "1.5rem" }}>
-          <h3>Decrypted File:</h3>
-          <a
-            href={decryptedFileUrl}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#0070f3", textDecoration: "none" }}
-          >
-            Click here to view or download
-          </a>
-          <p style={{ fontSize: "0.8em", color: "#666" }}>
-            Note: This is a temporary local URL for the decrypted content.
-          </p>
-        </div>
-      )}
+              {cid && (
+                <div className="mt-4 text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2 text-green-600">
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Uploaded successfully!</span>
+                  </div>
+                  <p className="text-xs text-gray-500 break-all">CID: {cid}</p>
+                  <a
+                    href={`https://gateway.lighthouse.storage/ipfs/${cid}`}
+                    target="_blank"
+                    className="text-indigo-500 hover:underline text-xs"
+                  >
+                    View on IPFS
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-// Simple styling function for buttons
-const buttonStyle = (disabled: boolean) => ({
-  padding: "10px 20px",
-  fontSize: "16px",
-  cursor: disabled ? "not-allowed" : "pointer",
-  backgroundColor: disabled ? "#ccc" : "#0070f3",
-  color: "white",
-  border: "none",
-  borderRadius: "5px",
-  opacity: disabled ? 0.6 : 1,
-});
-
-export default LighthouseControls;
+}
