@@ -42,15 +42,15 @@ contract SafeCrypt {
     }
 
     function addCID(address user, string calldata cid) external onlyAdmin {
-        uint index = cidCount[user];
+        uint index = cidCount[user] + 1;
         cids[user][index] = cid;
-        cidCount[user] = index + 1;
+        cidCount[user] = index;
 
         emit CIDAdded(user, cid, msg.sender);
     }
 
     function getCID(address user, uint index) external view returns (string memory) {
-        require(index < cidCount[user], "Index out of bounds");
+        require(index <= cidCount[user], "Index out of bounds");
         return cids[user][index];
     }
 
