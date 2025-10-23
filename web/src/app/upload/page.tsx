@@ -28,7 +28,11 @@ const sendMetadataToApi = async (data: {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to store metadata on the server.");
+    const errorBody = await response.json(); // Read the error body from the API
+    // The API sends { message: "Failed to register...", error: "..." }
+    throw new Error(
+      errorBody.error || "Failed to store metadata on the server.",
+    );
   }
   return response.json();
 };
@@ -98,17 +102,28 @@ export default function UploadPage() {
 
       setCid(newCid);
       setStatus("Upload complete! Storing metadata...");
-      setProgress(100);
+      setProgress(95);
 
       // --- 2. Send Metadata to Next.js API ---
-      await sendMetadataToApi({
+      const apiResponse = await sendMetadataToApi({
         filename,
         fileExtension,
         userAddress,
         cid: newCid,
       });
 
-      setStatus("Metadata stored successfully!");
+      if (apiResponse.receiptStatus === "success") {
+        setStatus("Metadata stored successfully!");
+        console.log("Transaction Hash:", apiResponse.txHash);
+      } else {
+        // This case should ideally be caught by the response.ok check in sendMetadataToApi,
+        // but included for robustness.
+        throw new Error(
+          "Transaction failed or was reverted on the blockchain.",
+        );
+      }
+
+      setProgress(100);
     } catch (err: any) {
       console.error("Upload/Metadata Error:", err);
       setError(err.message || "An upload or metadata storage error occurred.");
