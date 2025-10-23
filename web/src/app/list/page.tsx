@@ -3,9 +3,8 @@
 import { useAccount, useContractRead } from "wagmi";
 import { Address } from "viem";
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { SEAL_ENCRYPT_ABI } from "@/lib/contractAbi";
-import { usePublicClient, useWalletClient } from "wagmi";
 
 // Configuration
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as
@@ -59,13 +58,16 @@ const DocumentDisplay = ({
   index: number;
   isEnabled: boolean;
 }) => {
+  const isConnected = useAccount();
+
   const { data: document, isLoading: isDocumentLoading } = useContractRead({
     address: CONTRACT_ADDRESS,
     abi: SEAL_ENCRYPT_ABI,
     functionName: "getDocument",
     args: [userAddress, BigInt(index)], // The index must be passed as BigInt or string if the ABI expects uint256
-    enabled: isEnabled && !!CONTRACT_ADDRESS,
-    watch: true,
+    query: {
+      enabled: isConnected && !!CONTRACT_ADDRESS,
+    },
   });
 
   if (!isEnabled) return null; // Don't render if not enabled
@@ -127,8 +129,9 @@ export default function DashboardPage() {
     abi: SEAL_ENCRYPT_ABI,
     functionName: "usernames",
     args: [address as Address],
-    enabled: isConnected && !!CONTRACT_ADDRESS,
-    watch: true,
+    query: {
+      enabled: isConnected && !!CONTRACT_ADDRESS,
+    },
   });
 
   // Fetch document count
@@ -138,8 +141,9 @@ export default function DashboardPage() {
       abi: SEAL_ENCRYPT_ABI,
       functionName: "documentCount",
       args: [address as Address],
-      enabled: isConnected && !!CONTRACT_ADDRESS,
-      watch: true,
+      query: {
+        enabled: isConnected && !!CONTRACT_ADDRESS,
+      },
     },
   );
 

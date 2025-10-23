@@ -92,8 +92,9 @@ export default function DashboardPage() {
     abi: SEAL_ENCRYPT_ABI,
     functionName: "usernames",
     args: [address as Address],
-    enabled: isConnected && !!CONTRACT_ADDRESS,
-    watch: true,
+    query: {
+      enabled: isConnected && !!CONTRACT_ADDRESS,
+    },
   });
 
   // 2. NEW: Check if the *input* username is already taken
@@ -105,12 +106,9 @@ export default function DashboardPage() {
       functionName: "usernameToAddress",
       args: [usernameInput],
       // Only query if the user is connected, the contract exists, and the input is valid/not empty
-      enabled:
-        isConnected &&
-        !!CONTRACT_ADDRESS &&
-        validateUsername(usernameInput).isValid &&
-        usernameInput !== username,
-      watch: true,
+      query: {
+        enabled: isConnected && !!CONTRACT_ADDRESS,
+      },
     });
 
   // Logic to determine if the input username is taken
@@ -126,8 +124,9 @@ export default function DashboardPage() {
       abi: SEAL_ENCRYPT_ABI,
       functionName: "documentCount",
       args: [address as Address],
-      enabled: isConnected && !!CONTRACT_ADDRESS,
-      watch: true,
+      query: {
+        enabled: isConnected && !!CONTRACT_ADDRESS,
+      },
     },
   );
 
