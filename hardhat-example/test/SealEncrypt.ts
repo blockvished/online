@@ -5,12 +5,12 @@ import { network } from "hardhat";
 import { getAddress } from "viem";
 import type { Address } from "viem";
 
-describe("SafeCrypt", async function () {
+describe("SealEncrypt", async function () {
   const { viem } = await network.connect();
   const publicClient = await viem.getPublicClient();
 
   it("Should deploy the contract", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
 
     assert.ok(safeCrypt.address);
     assert.match(
@@ -21,7 +21,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Owner can add an admin", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const isActive = true;
 
     await safeCrypt.write.addAdmin([
@@ -37,7 +37,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Owner can add an admin and remove an admin", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const isActive = true;
 
     await safeCrypt.write.addAdmin([
@@ -57,7 +57,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Add document and read the event", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const cid = "testcid";
     const [deployer] = await viem.getWalletClients();
     const senderAddress = getAddress(deployer.account.address);
@@ -90,7 +90,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Add document and get the document", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const cid = "testcid";
 
     const targetAddress = getAddress(
@@ -136,7 +136,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Get all cids", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const cid = "testcid";
 
     const targetAddress = getAddress(
@@ -170,7 +170,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Set username to address and get username via address", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const [deployer] = await viem.getWalletClients();
     const deployerAddress = getAddress(deployer.account.address);
 
@@ -183,7 +183,7 @@ describe("SafeCrypt", async function () {
   });
 
   it("Set username to address and get address via username", async function () {
-    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const safeCrypt = await viem.deployContract("SealEncrypt");
     const [deployer] = await viem.getWalletClients();
     const deployerAddress = getAddress(deployer.account.address);
 
