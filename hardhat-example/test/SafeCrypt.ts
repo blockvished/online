@@ -4,7 +4,6 @@ import { describe, it } from "node:test";
 import { network } from "hardhat";
 import { getAddress } from "viem";
 import type { Address } from "viem";
-import { read } from "node:fs";
 
 describe("SafeCrypt", async function () {
   const { viem } = await network.connect();
@@ -167,6 +166,34 @@ describe("SafeCrypt", async function () {
       await safeCrypt.read.getDocumentCount([
         "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
       ]),
+    );
+  });
+
+  it("Set username to address and get username via address", async function () {
+    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const [deployer] = await viem.getWalletClients();
+    const deployerAddress = getAddress(deployer.account.address);
+
+    const new_username = "test_username";
+
+    await safeCrypt.write.setUsername([new_username]);
+    const storedUsername = await safeCrypt.read.usernames([deployerAddress]);
+
+    assert.strictEqual(storedUsername, new_username);
+  });
+
+  it("Set username to address and get address via username", async function () {
+    const safeCrypt = await viem.deployContract("SafeCrypt");
+    const [deployer] = await viem.getWalletClients();
+    const deployerAddress = getAddress(deployer.account.address);
+
+    const new_username = "test_username";
+
+    await safeCrypt.write.setUsername([new_username]);
+
+    assert.equal(
+      deployerAddress,
+      await safeCrypt.read.usernameToAddress([new_username]),
     );
   });
 });
