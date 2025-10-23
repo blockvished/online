@@ -15,7 +15,7 @@ const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as
 
 // --- Helper Components & Functions ---
 
-// 1. IMPROVED StatusBadge component with a pill style
+// 1. StatusBadge component remains the same
 const StatusBadge = ({
   isLoading,
   value,
@@ -77,13 +77,12 @@ export default function DashboardPage() {
   const [isSettingUsername, setIsSettingUsername] = useState(false);
   const [txSuccess, setTxSuccess] = useState(false);
   const [txHash, setTxHash] = useState<string>("");
-  // showUpdateForm now controls the form's visibility inside the card
   const [showUpdateForm, setShowUpdateForm] = useState(false);
 
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
-  // Fetch Username
+  // 1. Fetch Current Username (Remains the same)
   const {
     data: username,
     isLoading: isUsernameLoading,
@@ -96,6 +95,29 @@ export default function DashboardPage() {
     enabled: isConnected && !!CONTRACT_ADDRESS,
     watch: true,
   });
+
+  // 2. NEW: Check if the *input* username is already taken
+  // This reads the usernameToAddress mapping for the currently typed input.
+  const { data: usernameAddressCheck, isLoading: isUsernameCheckLoading } =
+    useContractRead({
+      address: CONTRACT_ADDRESS,
+      abi: SEAL_ENCRYPT_ABI,
+      functionName: "usernameToAddress",
+      args: [usernameInput],
+      // Only query if the user is connected, the contract exists, and the input is valid/not empty
+      enabled:
+        isConnected &&
+        !!CONTRACT_ADDRESS &&
+        validateUsername(usernameInput).isValid &&
+        usernameInput !== username,
+      watch: true,
+    });
+
+  // Logic to determine if the input username is taken
+  const isUsernameTaken =
+    !isUsernameCheckLoading &&
+    usernameAddressCheck !== undefined &&
+    usernameAddressCheck !== "0x0000000000000000000000000000000000000000"; // Check against zero address
 
   // Fetch Document Count
   const { data: documentCount, isLoading: isDocCountLoading } = useContractRead(
@@ -112,19 +134,16 @@ export default function DashboardPage() {
   const docCountValue = documentCount !== undefined ? Number(documentCount) : 0;
   const isAccountActivated = !!username;
 
-  // --- Handlers (Unchanged) ---
+  // --- Handlers ---
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setUsernameInput(value);
 
-    if (validationError) {
-      setValidationError("");
-    }
-    if (txSuccess) {
-      setTxSuccess(false);
-      setTxHash("");
-    }
+    // Clear UI state on change
+    if (validationError) setValidationError("");
+    if (txSuccess) setTxSuccess(false);
+    if (txHash) setTxHash("");
   };
 
   const handleCancelUpdate = () => {
@@ -138,8 +157,21 @@ export default function DashboardPage() {
   const handleSetUsername = async () => {
     const validation = validateUsername(usernameInput);
 
+    // Initial client-side validation
     if (!validation.isValid) {
       setValidationError(validation.error);
+      return;
+    }
+
+    // NEW: Check if the username is taken based on the contract read result
+    if (isUsernameTaken) {
+      setValidationError("Username is already taken. Please choose another.");
+      return;
+    }
+
+    // Check if the user is attempting to set their current username
+    if (usernameInput === username) {
+      setValidationError("This is your current username.");
       return;
     }
 
@@ -153,24 +185,20 @@ export default function DashboardPage() {
     setTxSuccess(false);
 
     try {
-      // Get contract instance using viem
       const sealEncrypt = getContract({
         address: CONTRACT_ADDRESS,
         abi: SEAL_ENCRYPT_ABI,
         client: { public: publicClient, wallet: walletClient },
       });
 
-      // Write to contract
       const hash = await sealEncrypt.write.setUsername([usernameInput]);
       setTxHash(hash);
 
-      // Wait for transaction receipt
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
       if (receipt.status === "success") {
         setTxSuccess(true);
         setUsernameInput("");
-        // Refetch username after successful transaction
         setTimeout(() => {
           refetchUsername();
           setShowUpdateForm(false);
@@ -190,6 +218,16 @@ export default function DashboardPage() {
     }
   };
 
+  // Determine button state and message
+  const isValidClientSide = validateUsername(usernameInput).isValid;
+  const isButtonDisabled =
+    !usernameInput ||
+    isSettingUsername ||
+    !isValidClientSide ||
+    isUsernameCheckLoading ||
+    isUsernameTaken ||
+    (isAccountActivated && usernameInput === username);
+
   // --- Render logic ---
 
   if (!CONTRACT_ADDRESS) {
@@ -203,26 +241,20 @@ export default function DashboardPage() {
           <code className="bg-red-800/50 p-1 rounded">
             NEXT_PUBLIC_CONTRACT_ADDRESS
           </code>
-          ) is not set in your environment variables. Please check your setup.
+          ) is not set in your environment variables.
         </p>
       </div>
     );
   }
 
   return (
-    // min-h-[calc(100vh-8rem)] ensures footer visibility
     <div className="flex flex-col items-center p-8 bg-gray-950 text-white min-h-[calc(100vh-8rem)]">
-      {/* -------------------------------------------------------------------
-          REMOVED: The Fixed Corner Component
-          ------------------------------------------------------------------- */}
-
-      {/* MAIN DASHBOARD CONTENT (Centralized Flow) */}
       <h1 className="text-5xl font-extrabold mb-12 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 shadow-text-lg">
         🔒 SealEncrypt Dashboard
       </h1>
 
       <div className="w-full max-w-lg space-y-8">
-        {/* User Data Card (Username and Button restored here) */}
+        {/* 1. User Data Card */}
         <div className="p-8 bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl border border-gray-700/50">
           <h2 className="text-2xl font-bold mb-6 text-gray-200 border-b border-gray-700 pb-3 flex items-center gap-2">
             🔗 On-Chain User Data
@@ -242,11 +274,10 @@ export default function DashboardPage() {
                 </code>
               </div>
 
-              {/* Username Display AND Button (New/Restored Location) */}
+              {/* Username Display AND Button */}
               <div className="flex justify-between items-center bg-gray-700/50 p-3 rounded-lg">
                 <p className="text-gray-300 font-medium">Username:</p>
                 <div className="flex items-center space-x-3">
-                  {/* Username Status Badge */}
                   <StatusBadge
                     isLoading={isUsernameLoading}
                     value={username as string}
@@ -257,7 +288,10 @@ export default function DashboardPage() {
                   {/* Update/Change Button (visible if activated and form is hidden) */}
                   {isAccountActivated && !showUpdateForm && (
                     <button
-                      onClick={() => setShowUpdateForm(true)}
+                      onClick={() => {
+                        setShowUpdateForm(true);
+                        setUsernameInput((username as string) || ""); // Pre-fill current username
+                      }}
                       className="text-xs font-medium text-blue-300 bg-gray-600/50 hover:bg-gray-600/70 py-1.5 px-3 rounded-lg transition-colors border border-blue-500/30"
                     >
                       Change
@@ -309,9 +343,20 @@ export default function DashboardPage() {
                     />
                   </div>
 
-                  {validationError && (
-                    <p className="text-red-400 text-sm font-medium animate-pulse">
-                      🛑 {validationError}
+                  {/* Display network/validation errors here */}
+                  {(validationError ||
+                    isUsernameTaken ||
+                    isUsernameCheckLoading) && (
+                    <p
+                      className={`text-sm font-medium animate-pulse ${isUsernameTaken ? "text-red-400" : "text-yellow-400"}`}
+                    >
+                      {isUsernameCheckLoading && usernameInput.length > 0
+                        ? "⏳ Checking availability..."
+                        : isUsernameTaken
+                          ? "🛑 Username is already taken."
+                          : validationError
+                            ? `🛑 ${validationError}`
+                            : ""}
                     </p>
                   )}
 
@@ -330,7 +375,7 @@ export default function DashboardPage() {
                   <div className="flex gap-3 pt-2">
                     <button
                       onClick={handleSetUsername}
-                      disabled={!usernameInput || isSettingUsername}
+                      disabled={isButtonDisabled}
                       className="flex-1 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                       {isSettingUsername ? "Updating..." : "Update"}
@@ -348,13 +393,12 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        {/* --- */}
 
-        {/* Account Status and Actions Section */}
+        {/* 2. Account Status and Actions Section */}
         {isConnected && !isUsernameLoading && (
           <div className="text-center pt-4 space-y-6">
             {!isAccountActivated ? (
-              // Activation Form
+              // Initial Activation Form (Requires the same availability check)
               <div className="p-8 bg-purple-900/40 border border-purple-600 rounded-xl shadow-xl space-y-6">
                 <h3 className="text-2xl font-bold text-purple-300">
                   🚀 Activate Your Account
@@ -386,9 +430,20 @@ export default function DashboardPage() {
                     </p>
                   </div>
 
-                  {validationError && (
-                    <p className="text-red-400 text-sm font-medium animate-pulse">
-                      🛑 {validationError}
+                  {/* Display network/validation errors here */}
+                  {(validationError ||
+                    isUsernameTaken ||
+                    isUsernameCheckLoading) && (
+                    <p
+                      className={`text-sm font-medium animate-pulse ${isUsernameTaken ? "text-red-400" : "text-yellow-400"}`}
+                    >
+                      {isUsernameCheckLoading && usernameInput.length > 0
+                        ? "⏳ Checking availability..."
+                        : isUsernameTaken
+                          ? "🛑 Username is already taken."
+                          : validationError
+                            ? `🛑 ${validationError}`
+                            : ""}
                     </p>
                   )}
 
@@ -405,7 +460,8 @@ export default function DashboardPage() {
 
                   <button
                     onClick={handleSetUsername}
-                    disabled={!usernameInput || isSettingUsername}
+                    // Use the general button disabled logic
+                    disabled={isButtonDisabled}
                     className="w-full text-lg font-bold text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-2xl disabled:bg-gray-600 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed disabled:shadow-none"
                   >
                     {isSettingUsername
@@ -415,7 +471,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             ) : (
-              // User is Activated
+              // User is Activated - Primary Actions Card
               <div className="p-6 bg-gray-800/80 rounded-2xl shadow-xl border border-gray-700/50 space-y-6">
                 <h3 className="text-xl font-bold text-green-400 mb-4">
                   Account Active!
