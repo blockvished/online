@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-59d7dc174a9664d6879f033a8df1b952a543f8d5",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/SealEncrypt.sol": "project/contracts/SealEncrypt.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/SealEncrypt.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract SealEncrypt {\n    address public owner;\n    mapping(address => bool) public isAdmin;\n\n    mapping(address => string) public usernames;\n    mapping(string => address) public usernameToAddress;\n\n    struct Document {\n        address owner;\n        string cid;\n        uint256 unlockTime;\n        uint256 price;\n        address[] recipients;\n        bool encrypted;\n    }\n\n    mapping(address => mapping(uint256 => Document)) public documents;\n    mapping(address => uint256) public documentCount;\n\n    event AdminAdded(address indexed admin);\n    event AdminRemoved(address indexed admin);\n    event CIDAdded(address indexed user, string cid, address indexed addedBy);\n    event UsernameSet(address indexed user, string username);\n\n    constructor() {\n        owner = msg.sender;\n        isAdmin[msg.sender] = true;\n        emit AdminAdded(msg.sender);\n    }\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"Not contract owner\");\n        _;\n    }\n\n    modifier onlyAdmin() {\n        require(isAdmin[msg.sender], \"Not an admin\");\n        _;\n    }\n\n    function addAdmin(address _admin) external onlyOwner {\n        require(!isAdmin[_admin], \"Already an admin\");\n        isAdmin[_admin] = true;\n        emit AdminAdded(_admin);\n    }\n\n    function removeAdmin(address _admin) external onlyOwner {\n        require(isAdmin[_admin], \"Not an admin\");\n        isAdmin[_admin] = false;\n        emit AdminRemoved(_admin);\n    }\n\n    function addDocument(\n        address user,\n        string calldata cid,\n        uint256 unlockTime,\n        uint256 price,\n        address[] calldata recipients,\n        bool encrypted\n    ) external onlyAdmin {\n        uint256 index = documentCount[user] + 1;\n        documents[user][index] = Document({\n            owner: user,\n            cid: cid,\n            unlockTime: unlockTime,\n            price: price,\n            recipients: recipients,\n            encrypted: encrypted\n        });\n\n        documentCount[user] = index;\n\n        emit CIDAdded(user, cid, msg.sender);\n    }\n\n    function getDocument(\n        address user,\n        uint256 index\n    ) external view returns (Document memory) {\n        require(\n            index > 0 && index <= documentCount[user],\n            \"Invalid document index\"\n        );\n        return documents[user][index];\n    }\n\n    function getDocumentCount(address user) external view returns (uint256) {\n        return documentCount[user];\n    }\n\n    function setUsername(string calldata username) external {\n        require(bytes(username).length > 0, \"Username cannot be empty\");\n        require(\n            usernameToAddress[username] == address(0),\n            \"Username already taken\"\n        );\n\n        string memory oldUsername = usernames[msg.sender];\n        if (bytes(oldUsername).length > 0) {\n            delete usernameToAddress[oldUsername];\n        }\n\n        usernames[msg.sender] = username;\n        usernameToAddress[username] = msg.sender;\n\n        emit UsernameSet(msg.sender, username);\n    }\n}\n"
+      }
+    }
+  }
+}

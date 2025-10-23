@@ -1,10 +1,21 @@
 import type { HardhatUserConfig } from "hardhat/config";
+import hardhatVerify from "@nomicfoundation/hardhat-verify";
 
 import hardhatToolboxViemPlugin from "@nomicfoundation/hardhat-toolbox-viem";
 import { configVariable } from "hardhat/config";
 
 const config: HardhatUserConfig = {
-  plugins: [hardhatToolboxViemPlugin],
+  plugins: [hardhatToolboxViemPlugin, hardhatVerify],
+
+  verify: {
+    etherscan: {
+      apiKey: configVariable("ETHERSCAN_API_KEY"),
+    },
+    blockscout: {
+      enabled: false,
+    },
+  },
+
   solidity: {
     profiles: {
       default: {
@@ -33,7 +44,7 @@ const config: HardhatUserConfig = {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
+      url: "https://ethereum-sepolia-rpc.publicnode.com",
       accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
     },
   },

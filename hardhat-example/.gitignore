@@ -1,5 +1,9 @@
 # Node modules
 /node_modules
+.env
+.gitignore
+Counter.sol
+ignition/modules/Counter.ts
 
 # Compilation output
 /dist
