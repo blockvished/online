@@ -8,8 +8,17 @@ contract SafeCrypt {
     mapping(address => string) public usernames;
     mapping(string => address) public usernameToAddress;
 
-    mapping(address => mapping(uint256 => string)) public cids;
-    mapping(address => uint256) public cidCount;
+    struct Document {
+        address owner;
+        string cid;
+        uint256 unlockTime;
+        uint256 price;
+        address[] recipients;
+        bool encrypted;
+    }
+
+    mapping(address => mapping(uint256 => Document)) public documents;
+    mapping(address => uint256) public documentCount;
 
     event AdminAdded(address indexed admin);
     event AdminRemoved(address indexed admin);
@@ -44,24 +53,42 @@ contract SafeCrypt {
         emit AdminRemoved(_admin);
     }
 
-    function addCID(address user, string calldata cid) external onlyAdmin {
-        uint256 index = cidCount[user] + 1;
-        cids[user][index] = cid;
-        cidCount[user] = index;
+    function addDocument(
+        address user,
+        string calldata cid,
+        uint256 unlockTime,
+        uint256 price,
+        address[] calldata recipients,
+        bool encrypted
+    ) external onlyAdmin {
+        uint256 index = documentCount[user] + 1;
+        documents[user][index] = Document({
+            owner: user,
+            cid: cid,
+            unlockTime: unlockTime,
+            price: price,
+            recipients: recipients,
+            encrypted: encrypted
+        });
+
+        documentCount[user] = index;
 
         emit CIDAdded(user, cid, msg.sender);
     }
 
-    function getCID(
+    function getDocument(
         address user,
         uint256 index
-    ) external view returns (string memory) {
-        require(index <= cidCount[user], "Index out of bounds");
-        return cids[user][index];
+    ) external view returns (Document memory) {
+        require(
+            index > 0 && index <= documentCount[user],
+            "Invalid document index"
+        );
+        return documents[user][index];
     }
 
-    function getCIDCount(address user) external view returns (uint256) {
-        return cidCount[user];
+    function getDocumentCount(address user) external view returns (uint256) {
+        return documentCount[user];
     }
 
     function setUsername(string calldata username) external {
