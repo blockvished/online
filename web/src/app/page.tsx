@@ -7,21 +7,21 @@ import { ShieldCheck, Lock, Share2 } from "lucide-react";
 const features = [
   {
     icon: <Lock className="h-8 w-8 text-blue-400" />,
-    title: "Ironclad Encryption",
+    title: "Client-Side Encryption & IPFS",
     description:
-      "Your files are encrypted on-device before being stored, ensuring only you and your chosen recipients can access them.",
+      "Your files are encrypted directly on your device and uploaded to IPFS before storing metadata on-chain, ensuring only you control the data.",
   },
   {
     icon: <ShieldCheck className="h-8 w-8 text-purple-400" />,
-    title: "On-Chain Conditions",
+    title: "Share & Revoke Access",
     description:
-      "Leverage smart contracts to set conditions for decryption, such as time-locks, payments, or specific recipient addresses.",
+      "Share documents securely by granting access to specific recipients, and revoke access at any time if needed.",
   },
   {
     icon: <Share2 className="h-8 w-8 text-yellow-400" />,
-    title: "Decentralized & Secure",
+    title: "Decryption with Your Signature",
     description:
-      "Built on a multichain architecture for maximum uptime and censorship resistance. Your data, your rules.",
+      "Documents can only be decrypted with your signature, so only you and the users you authorize can access them.",
   },
 ];
 
@@ -30,7 +30,7 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.2, // This will make each child animate 0.2s after the previous one
+      staggerChildren: 0.2,
     },
   },
 };
@@ -40,16 +40,14 @@ const itemVariants = {
   visible: {
     y: 0,
     opacity: 1,
-    transition: {
-      duration: 0.5,
-    },
+    transition: { duration: 0.5 },
   },
 };
 
 export default function Home() {
   return (
     <div className="relative flex-grow flex flex-col items-center justify-center text-center px-4 overflow-hidden">
-      {/* Background Glow Effect */}
+      {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         <div className="absolute w-[800px] h-[800px] bg-radial-gradient(ellipse_at_center,_var(--tw-gradient-stops)) from-purple-900/40 via-blue-900/20 to-transparent rounded-full -translate-y-1/3 blur-3xl" />
       </div>
@@ -71,8 +69,9 @@ export default function Home() {
           transition={{ delay: 0.3, duration: 0.5 }}
           className="text-lg max-w-2xl text-gray-400 mb-10"
         >
-          Securely store, encrypt, and share documents on-chain — unlocking them
-          automatically based on time, payment, or recipient conditions.
+          Securely store, encrypt, and share documents on-chain. Set a unique
+          username, and let trusted admins manage document uploads while access
+          is controlled by time-locks, payments, and recipient conditions.
         </motion.p>
 
         <motion.div
@@ -81,10 +80,10 @@ export default function Home() {
           transition={{ delay: 0.6, type: "spring", stiffness: 120 }}
         >
           <Link
-            href="/upload"
+            href="/dashboard"
             className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold text-lg hover:shadow-lg hover:shadow-purple-600/40 hover:scale-105 transition-all duration-300"
           >
-            Get Started
+            Upload Your First Document
           </Link>
         </motion.div>
 
