@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 
 import { network } from "hardhat";
 import { getAddress } from "viem";
+import type { Address } from "viem";
+import { read } from "node:fs";
 
 describe("SafeCrypt", async function () {
   const { viem } = await network.connect();
@@ -55,7 +57,7 @@ describe("SafeCrypt", async function () {
     );
   });
 
-  it("Add content Id and read the event", async function () {
+  it("Add document and read the event", async function () {
     const safeCrypt = await viem.deployContract("SafeCrypt");
     const cid = "testcid";
     const [deployer] = await viem.getWalletClients();
@@ -65,46 +67,104 @@ describe("SafeCrypt", async function () {
       "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
     ); // normalize input
 
+    const unlockTime = 234n;
+    const price = 239n;
+    const recipients: Address[] = [
+      "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+      "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    ];
+    const encrypted = true;
+
     await viem.assertions.emitWithArgs(
-      safeCrypt.write.addCID([targetAddress, cid]),
+      safeCrypt.write.addDocument([
+        targetAddress,
+        cid,
+        unlockTime,
+        price,
+        recipients,
+        encrypted,
+      ]),
       safeCrypt,
       "CIDAdded",
       [targetAddress, cid, senderAddress],
     );
   });
 
-  it("Add content Id and get the CID", async function () {
+  it("Add document and get the document", async function () {
     const safeCrypt = await viem.deployContract("SafeCrypt");
     const cid = "testcid";
 
-    await safeCrypt.write.addCID([
+    const targetAddress = getAddress(
       "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    );
+    const unlockTime = 234n;
+    const price = 239n;
+    const recipients: Address[] = [
+      getAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"),
+      getAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"),
+    ];
+    const encrypted = true;
+
+    await safeCrypt.write.addDocument([
+      targetAddress,
       cid,
+      unlockTime,
+      price,
+      recipients,
+      encrypted,
     ]);
 
-    assert.equal(
+    // Read document from contract
+    const readD = await safeCrypt.read.getDocument([targetAddress, 1n]);
+
+    // Normalize and sort addresses
+    const normalizedReadD = {
+      ...readD,
+      owner: getAddress(readD.owner),
+      recipients: readD.recipients.map(getAddress).sort(),
+    };
+
+    const expectedDocument = {
+      owner: targetAddress,
       cid,
-      await safeCrypt.read.getCID([
-        "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
-        1n,
-      ]),
-    );
+      unlockTime,
+      price,
+      recipients: recipients.map(getAddress).sort(),
+      encrypted,
+    };
+
+    assert.deepEqual(normalizedReadD, expectedDocument);
   });
 
   it("Get all cids", async function () {
     const safeCrypt = await viem.deployContract("SafeCrypt");
     const cid = "testcid";
 
+    const targetAddress = getAddress(
+      "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    );
+    const unlockTime = 234n;
+    const price = 239n;
+    const recipients: Address[] = [
+      getAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"),
+      getAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"),
+    ];
+    const encrypted = true;
+
     for (let i = 1n; i <= 3n; i++) {
-      await safeCrypt.write.addCID([
-        "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+      await safeCrypt.write.addDocument([
+        targetAddress,
         `${cid}${`i`}`,
+        unlockTime,
+        price,
+        recipients,
+        encrypted,
       ]);
     }
 
     assert.equal(
       3n,
-      await safeCrypt.read.getCIDCount([
+      await safeCrypt.read.getDocumentCount([
         "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
       ]),
     );
