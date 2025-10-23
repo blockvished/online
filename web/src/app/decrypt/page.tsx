@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { useAccount, useWalletClient } from "wagmi";
 import { getSignedMessage, decryptEncryptedFile } from "@/lib/lighthouse";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CheckCircle, XCircle, FileText } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, KeyRound } from "lucide-react";
 
-export default function DownloadPage() {
+export default function DecryptPage() {
   const { address: userAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
 
@@ -26,71 +25,73 @@ export default function DownloadPage() {
       setError("Please connect your wallet.");
       return;
     }
-
     try {
       setError("");
+      setFileUrl(null);
       setLoading(true);
       setStatus("Signing message...");
-
       const signedMsg = await getSignedMessage(userAddress, walletClient);
-
-      setStatus("Decrypting file...");
+      setStatus("Requesting decryption key...");
       const url = await decryptEncryptedFile(cid, userAddress, signedMsg);
-
       setFileUrl(url);
-      setStatus("✅ File decrypted!");
+      setStatus("File decrypted successfully!");
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Something went wrong during decryption.");
+      setError(err.message || "Decryption failed. You may not have access.");
       setFileUrl(null);
-      setStatus("");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 text-gray-900 px-4">
-      <Card className="w-full max-w-md shadow-lg border border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-center flex items-center justify-center gap-2 text-gray-800">
-            <FileText className="w-5 h-5 text-green-500" />
-            Decrypt Encrypted File
-          </CardTitle>
-        </CardHeader>
+    <div className="relative flex-grow flex items-center justify-center p-4">
+      {/* Background Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-radial-gradient(ellipse_at_center,_var(--tw-gradient-stops)) from-blue-900/30 via-purple-900/10 to-transparent rounded-full blur-3xl" />
 
-        <CardContent className="space-y-5">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 w-full max-w-md bg-gray-950/30 backdrop-blur-lg border border-white/10 rounded-2xl shadow-xl p-8"
+      >
+        <div className="flex flex-col items-center justify-center gap-2 mb-6">
+          <KeyRound className="w-8 h-8 text-purple-400" />
+          <h2 className="text-2xl font-bold text-white">Decrypt File</h2>
+        </div>
+
+        <div className="space-y-6">
           {!isConnected ? (
-            <p className="text-center text-sm text-gray-500">
+            <p className="text-center text-sm text-gray-400 py-8">
               Please connect your wallet to continue.
             </p>
           ) : (
             <div className="flex flex-col items-center space-y-4">
               <input
                 type="text"
-                placeholder="Enter CID of the encrypted file"
+                placeholder="Enter file CID to decrypt"
                 value={cid}
                 onChange={(e) => setCid(e.target.value)}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-400"
+                className="w-full bg-white/5 border border-white/20 rounded-xl px-4 py-3 text-gray-200 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
               />
 
-              <Button
+              <button
                 onClick={handleDecrypt}
                 disabled={loading || !cid}
-                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-3 rounded-xl hover:opacity-90 transition-opacity duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
                     Decrypting...
                   </>
                 ) : (
                   "Decrypt File"
                 )}
-              </Button>
+              </button>
 
-              {status && (
-                <p className="text-sm text-gray-600 text-center">{status}</p>
+              {loading && (
+                <p className="text-sm text-gray-400 text-center">{status}</p>
               )}
 
               {error && (
@@ -99,26 +100,29 @@ export default function DownloadPage() {
                 </div>
               )}
 
-              {fileUrl && (
-                <div className="mt-4 text-center space-y-2">
-                  <div className="flex items-center justify-center gap-2 text-green-600">
+              {fileUrl && !loading && (
+                <div className="text-center space-y-3 pt-2">
+                  <div className="flex items-center justify-center gap-2 text-green-400">
                     <CheckCircle className="w-5 h-5" />
-                    <span>File decrypted successfully!</span>
+                    <span className="font-semibold">
+                      Decryption successful!
+                    </span>
                   </div>
                   <a
                     href={fileUrl}
                     download
                     target="_blank"
-                    className="text-green-500 hover:underline text-sm"
+                    rel="noopener noreferrer"
+                    className="inline-block bg-green-500/20 text-green-300 px-4 py-2 rounded-lg font-semibold hover:bg-green-500/30 transition-colors"
                   >
-                    View / Download Decrypted File
+                    Download Decrypted File
                   </a>
                 </div>
               )}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </motion.div>
     </div>
   );
 }
