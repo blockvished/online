@@ -12,6 +12,27 @@ import {
   FileIcon,
 } from "lucide-react";
 
+// Function to send metadata to Next.js API
+const sendMetadataToApi = async (data: {
+  filename: string;
+  fileExtension: string;
+  userAddress: string;
+  cid: string; // Including CID as well, which is crucial metadata
+}) => {
+  const response = await fetch("/api/store-metadata", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to store metadata on the server.");
+  }
+  return response.json();
+};
+
 export default function UploadPage() {
   const { address: userAddress, isConnected } = useAccount();
   const { data: walletClient } = useWalletClient();
@@ -42,14 +63,27 @@ export default function UploadPage() {
       setError("Please choose a file first.");
       return;
     }
+
+    // Extract filename and extension
+    const fullFilename = file.name;
+    const parts = fullFilename.split(".");
+    let filename = parts.slice(0, -1).join(".");
+    if (parts.length == 1) {
+      filename = fullFilename;
+    }
+    const fileExtension = parts.length > 1 ? (parts.pop() as string) : "";
+
     try {
       setError("");
       setLoading(true);
+
+      // --- 1. Lighthouse Upload Process ---
       setStatus("Signing message...");
       setProgress(10);
       const signedMsg = await getSignedMessage(userAddress, walletClient);
+
       setStatus("Uploading encrypted file...");
-      const cid = await uploadEncryptedFile(
+      const newCid = await uploadEncryptedFile(
         [file],
         userAddress,
         signedMsg,
@@ -61,12 +95,23 @@ export default function UploadPage() {
           setStatus(`Uploading... ${percent}%`);
         },
       );
-      setCid(cid);
-      setStatus("Upload complete!");
+
+      setCid(newCid);
+      setStatus("Upload complete! Storing metadata...");
       setProgress(100);
+
+      // --- 2. Send Metadata to Next.js API ---
+      await sendMetadataToApi({
+        filename,
+        fileExtension,
+        userAddress,
+        cid: newCid,
+      });
+
+      setStatus("Metadata stored successfully!");
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Something went wrong.");
+      console.error("Upload/Metadata Error:", err);
+      setError(err.message || "An upload or metadata storage error occurred.");
     } finally {
       setLoading(false);
     }
@@ -134,7 +179,9 @@ export default function UploadPage() {
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                    Uploading...
+                    {status.includes("Uploading")
+                      ? "Encrypting & Uploading..."
+                      : status}
                   </>
                 ) : (
                   "Encrypt & Upload"
@@ -161,11 +208,13 @@ export default function UploadPage() {
                 </div>
               )}
 
-              {cid && !loading && (
+              {cid && !loading && !error && (
                 <div className="text-center space-y-2 pt-2">
                   <div className="flex items-center justify-center gap-2 text-green-400">
                     <CheckCircle className="w-5 h-5" />
-                    <span className="font-semibold">Upload successful!</span>
+                    <span className="font-semibold">
+                      Upload & Metadata successful!
+                    </span>
                   </div>
                   <p className="text-xs text-gray-400 break-all px-4">
                     CID: {cid}
