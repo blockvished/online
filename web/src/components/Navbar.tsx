@@ -11,8 +11,8 @@ export default function Navbar() {
   const links = [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/upload", label: "Upload" },
-    { href: "/documents", label: "Documents" },
-    { href: "/decrypt", label: "Decrypt" },
+    { href: "/documents", label: "Yor SealEncrypts" },
+    { href: "/decrypt", label: "Decrypt Shared" },
     { href: "/share", label: "Share" },
   ];
 
