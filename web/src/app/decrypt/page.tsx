@@ -77,19 +77,26 @@ export default function DecryptPage() {
       setStatus("File decrypted successfully! Access link generated.");
     } catch (err: any) {
       console.error(err);
-      // More user-friendly error messages
+
       let displayError =
-        err.message ||
         "Decryption failed. Ensure the CID is correct and you have access permission.";
-      if (err.message.includes("no access")) {
-        displayError =
-          "Decryption failed. You do not have access permission for this file.";
+
+      if (typeof err === "string") {
+        displayError = err;
+      } else if (err && typeof err.message === "string") {
+        displayError = err.message;
+      } else if (err && err.data && typeof err.data.message === "string") {
+        displayError = err.data.message;
       }
+
+      // Custom message for access issues
+      if (displayError.toLowerCase().includes("no access")) {
+        displayError = "You do not have access permission for this file.";
+      }
+
       setError(displayError);
       setFileUrl(null);
       setFileName(null);
-    } finally {
-      setLoading(false);
     }
   };
 

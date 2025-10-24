@@ -61,6 +61,22 @@ export const shareEncryptedFile = async (
   return response.data;
 };
 
+// Revoke
+export const revokeEncryptedFile = async (
+  cid: string,
+  userAddress: string,
+  recipientAddress: string,
+  signedMessage: string,
+) => {
+  const response = await lighthouse.revokeFileAccess(
+    userAddress,
+    [recipientAddress],
+    cid,
+    signedMessage,
+  );
+  return response.data;
+};
+
 // Decrypt
 export const decryptEncryptedFile = async (
   cid: string,
