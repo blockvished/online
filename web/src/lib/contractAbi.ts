@@ -73,6 +73,7 @@ export const SEAL_ENCRYPT_ABI = [
       { internalType: "uint256", name: "price", type: "uint256" },
       { internalType: "address[]", name: "recipients", type: "address[]" },
       { internalType: "bool", name: "encrypted", type: "bool" },
+      { internalType: "string", name: "filename", type: "string" },
     ],
     name: "addDocument",
     outputs: [],
@@ -93,8 +94,9 @@ export const SEAL_ENCRYPT_ABI = [
     ],
     name: "documents",
     outputs: [
-      { internalType: "address", name: "owner", type: "address" },
+      { internalType: "string", name: "docName", type: "string" },
       { internalType: "string", name: "cid", type: "string" },
+      { internalType: "address", name: "owner", type: "address" },
       { internalType: "uint256", name: "unlockTime", type: "uint256" },
       { internalType: "uint256", name: "price", type: "uint256" },
       { internalType: "bool", name: "encrypted", type: "bool" },
@@ -111,11 +113,16 @@ export const SEAL_ENCRYPT_ABI = [
     outputs: [
       {
         components: [
-          { internalType: "address", name: "owner", type: "address" },
+          { internalType: "string", name: "docName", type: "string" },
           { internalType: "string", name: "cid", type: "string" },
+          { internalType: "address", name: "owner", type: "address" },
           { internalType: "uint256", name: "unlockTime", type: "uint256" },
           { internalType: "uint256", name: "price", type: "uint256" },
-          { internalType: "address[]", name: "recipients", type: "address[]" },
+          {
+            internalType: "address[]",
+            name: "sharedRecipients",
+            type: "address[]",
+          },
           { internalType: "bool", name: "encrypted", type: "bool" },
         ],
         internalType: "struct SealEncrypt.Document",

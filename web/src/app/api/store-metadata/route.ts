@@ -71,6 +71,7 @@ export async function POST(request: Request) {
       bigint, // price
       Address[], // recipients
       boolean, // encrypted
+      string,
     ] = [
       userAddress as Address, // 1. user: the original uploader
       cid, // 2. cid: the IPFS hash
@@ -78,6 +79,7 @@ export async function POST(request: Request) {
       0n, // 4. price: 0n
       [], // 5. recipients: empty array
       true, // 6. encrypted: true
+      filename,
     ];
 
     console.log("\n--- Transaction Arguments (addDocument) ---");
@@ -87,6 +89,8 @@ export async function POST(request: Request) {
     console.log(`Price: ${args[3].toString()}`);
     console.log(`Recipients: ${JSON.stringify(args[4])}`);
     console.log(`Encrypted: ${args[5]}`);
+    console.log(`Filename: ${args[6]}`);
+
     console.log("-------------------------------------------\n");
 
     // 5. Simulate the transaction (optional but highly recommended)

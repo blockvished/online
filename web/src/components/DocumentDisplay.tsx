@@ -31,8 +31,9 @@ export const DocumentDisplay = ({
       cid: string;
       unlockTime: bigint;
       price: bigint;
-      recipients: Address[];
+      sharedRecipients: Address[];
       encrypted: boolean;
+      docName: string;
     };
 
     return (
