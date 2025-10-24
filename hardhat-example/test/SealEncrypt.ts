@@ -61,6 +61,7 @@ describe("SealEncrypt", async function () {
     const cid = "testcid";
     const [deployer] = await viem.getWalletClients();
     const senderAddress = getAddress(deployer.account.address);
+    const docNm = "doccc.txt";
 
     const targetAddress = getAddress(
       "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
@@ -82,6 +83,7 @@ describe("SealEncrypt", async function () {
         price,
         recipients,
         encrypted,
+        docNm,
       ]),
       safeCrypt,
       "CIDAdded",
@@ -103,6 +105,7 @@ describe("SealEncrypt", async function () {
       getAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"),
     ];
     const encrypted = true;
+    const docNm = "doccc.txt";
 
     await safeCrypt.write.addDocument([
       targetAddress,
@@ -111,6 +114,7 @@ describe("SealEncrypt", async function () {
       price,
       recipients,
       encrypted,
+      docNm,
     ]);
 
     // Read document from contract
@@ -120,15 +124,16 @@ describe("SealEncrypt", async function () {
     const normalizedReadD = {
       ...readD,
       owner: getAddress(readD.owner),
-      recipients: readD.recipients.map(getAddress).sort(),
+      sharedRecipients: readD.sharedRecipients.map(getAddress).sort(),
     };
 
     const expectedDocument = {
+      docName: docNm,
       owner: targetAddress,
       cid,
       unlockTime,
       price,
-      recipients: recipients.map(getAddress).sort(),
+      sharedRecipients: recipients.map(getAddress).sort(),
       encrypted,
     };
 
@@ -149,6 +154,7 @@ describe("SealEncrypt", async function () {
       getAddress("0xd8da6bf26964af9d7eed9e03e53415d37aa96045"),
     ];
     const encrypted = true;
+    const docNm = "doccc.txt";
 
     for (let i = 1n; i <= 3n; i++) {
       await safeCrypt.write.addDocument([
@@ -158,6 +164,7 @@ describe("SealEncrypt", async function () {
         price,
         recipients,
         encrypted,
+        docNm,
       ]);
     }
 

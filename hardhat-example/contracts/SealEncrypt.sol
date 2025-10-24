@@ -9,11 +9,12 @@ contract SealEncrypt {
     mapping(string => address) public usernameToAddress;
 
     struct Document {
-        address owner;
+        string docName;
         string cid;
+        address owner;
         uint256 unlockTime;
         uint256 price;
-        address[] recipients;
+        address[] sharedRecipients;
         bool encrypted;
     }
 
@@ -59,15 +60,17 @@ contract SealEncrypt {
         uint256 unlockTime,
         uint256 price,
         address[] calldata recipients,
-        bool encrypted
+        bool encrypted,
+        string calldata filename
     ) external onlyAdmin {
         uint256 index = documentCount[user] + 1;
         documents[user][index] = Document({
+            docName: filename,
             owner: user,
             cid: cid,
             unlockTime: unlockTime,
             price: price,
-            recipients: recipients,
+            sharedRecipients: recipients,
             encrypted: encrypted
         });
 
