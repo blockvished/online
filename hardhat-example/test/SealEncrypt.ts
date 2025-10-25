@@ -86,8 +86,8 @@ describe("SealEncrypt", async function () {
         docNm,
       ]),
       safeCrypt,
-      "CIDAdded",
-      [targetAddress, cid, senderAddress],
+      "DocumentAdded",
+      [docNm, cid, targetAddress],
     );
   });
 
@@ -202,5 +202,128 @@ describe("SealEncrypt", async function () {
       deployerAddress,
       await safeCrypt.read.usernameToAddress([new_username]),
     );
+  });
+  it("Should share document access", async function () {
+    const safeCrypt = await viem.deployContract("SealEncrypt");
+
+    const targetAddress = getAddress(
+      "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    );
+    const recipient = getAddress("0xAb8483F64d9C6d1EcF9b849Ae677dD3315835Cb2");
+    const cid = "testcid";
+    const docNm = "doc.txt";
+    const unlockTime = 234n;
+    const price = 100n;
+    const recipients: Address[] = [];
+
+    // Add a document first
+    await safeCrypt.write.addDocument([
+      targetAddress,
+      cid,
+      unlockTime,
+      price,
+      recipients,
+      true,
+      docNm,
+    ]);
+
+    // Share access
+    await viem.assertions.emitWithArgs(
+      safeCrypt.write.shareDocumentAccess([targetAddress, 1n, recipient]),
+      safeCrypt,
+      "ShareAccess",
+      [targetAddress, "testcid", "", recipient],
+    );
+
+    // Verify the recipient is now in sharedRecipients
+    const doc = await safeCrypt.read.getDocument([targetAddress, 1n]);
+    const normalizedRecipients = doc.sharedRecipients.map(getAddress);
+    assert.ok(normalizedRecipients.includes(recipient));
+  });
+
+  it("Should revoke document access", async function () {
+    const safeCrypt = await viem.deployContract("SealEncrypt");
+
+    const targetAddress = getAddress(
+      "0xd8da6bf26964af9d7eed9e03e53415d37aa96045",
+    );
+    const recipient = getAddress("0xAb8483F64d9C6d1EcF9b849Ae677dD3315835Cb2");
+    const cid = "testcid";
+    const docNm = "doc.txt";
+    const unlockTime = 234n;
+    const price = 100n;
+    const recipients: Address[] = [recipient];
+
+    // Add a document with recipient already in sharedRecipients
+    await safeCrypt.write.addDocument([
+      targetAddress,
+      cid,
+      unlockTime,
+      price,
+      recipients,
+      true,
+      docNm,
+    ]);
+
+    // Revoke access
+    await viem.assertions.emitWithArgs(
+      safeCrypt.write.revokeDocumentAccess([targetAddress, 1n, recipient]),
+      safeCrypt,
+      "AccessRevoked",
+      [targetAddress, "testcid", "", recipient],
+    );
+
+    // Verify the recipient is removed
+    const doc = await safeCrypt.read.getDocument([targetAddress, 1n]);
+    const normalizedRecipients = doc.sharedRecipients.map(getAddress);
+    assert.ok(!normalizedRecipients.includes(recipient));
+  });
+
+  it("Should share document access with username of recipient", async function () {
+    const safeCrypt = await viem.deployContract("SealEncrypt");
+
+    const [deployer, recipientSigner] = await viem.getWalletClients();
+
+    const targetAddress = getAddress(deployer.account.address);
+    const recipientAddress = getAddress(recipientSigner.account.address);
+    const recipientUsername = "recipient_username";
+
+    await safeCrypt.write.setUsername([recipientUsername], {
+      account: recipientSigner.account,
+    });
+
+    const cid = "testcid";
+    const docNm = "doc.txt";
+    const unlockTime = 234n;
+    const price = 100n;
+    const initialRecipients: Address[] = [];
+    const encrypted = true;
+
+    await safeCrypt.write.addDocument(
+      [
+        targetAddress,
+        cid,
+        unlockTime,
+        price,
+        initialRecipients,
+        encrypted,
+        docNm,
+      ],
+      { account: deployer.account },
+    );
+
+    await viem.assertions.emitWithArgs(
+      safeCrypt.write.shareDocumentAccess(
+        [targetAddress, 1n, recipientAddress],
+        { account: deployer.account },
+      ),
+      safeCrypt,
+      "ShareAccess",
+      [targetAddress, cid, recipientUsername, recipientAddress],
+    );
+
+    const doc = await safeCrypt.read.getDocument([targetAddress, 1n]);
+    const normalizedRecipients = doc.sharedRecipients.map(getAddress);
+    assert.ok(normalizedRecipients.includes(recipientAddress));
   });
 });

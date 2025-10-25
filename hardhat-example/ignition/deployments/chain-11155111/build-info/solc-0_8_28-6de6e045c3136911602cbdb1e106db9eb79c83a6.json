@@ -1,0 +1,39 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-6de6e045c3136911602cbdb1e106db9eb79c83a6",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/SealEncrypt.sol": "project/contracts/SealEncrypt.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/SealEncrypt.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.0;\n\ncontract SealEncrypt {\n    address public owner;\n    mapping(address => bool) public isAdmin;\n\n    mapping(address => string) public usernames;\n    mapping(string => address) public usernameToAddress;\n\n    struct Document {\n        string docName;\n        string cid;\n        address owner;\n        uint256 unlockTime;\n        uint256 price;\n        bool encrypted;\n        address[] sharedRecipients;\n    }\n\n    mapping(address => mapping(uint256 => Document)) private documents;\n    mapping(address => uint256) private documentCount;\n\n    event AdminAdded(address indexed admin);\n    event AdminRemoved(address indexed admin);\n    event DocumentAdded(string addedBy, string cid, address indexed user);\n    event ShareAccess(\n        address indexed user,\n        string cid,\n        string shareUser,\n        address shareAddr\n    );\n    event AccessRevoked(\n        address indexed user,\n        string cid,\n        string Revokeuser,\n        address RevokeAddr\n    );\n\n    event UsernameSetAndUpdated(address indexed user, string username);\n    event UsernameSetAndCreated(address indexed user, string username);\n\n    error NotOwner();\n    error NotAdmin();\n    error AlreadyAdmin();\n    error NotAnAdmin();\n    error InvalidDocument();\n\n    error UsernameTaken();\n    error UsernameCannotBeEmpty();\n\n    constructor() {\n        owner = msg.sender;\n        isAdmin[msg.sender] = true;\n        emit AdminAdded(msg.sender);\n    }\n\n    modifier onlyOwner() {\n        if (msg.sender != owner) revert NotOwner();\n        _;\n    }\n\n    modifier onlyAdmin() {\n        if (!isAdmin[msg.sender]) revert NotAdmin();\n        _;\n    }\n\n    function addAdmin(address _admin) external onlyOwner {\n        if (isAdmin[_admin]) revert AlreadyAdmin();\n\n        isAdmin[_admin] = true;\n        emit AdminAdded(_admin);\n    }\n\n    function removeAdmin(address _admin) external onlyOwner {\n        if (!isAdmin[_admin]) revert NotAnAdmin();\n\n        isAdmin[_admin] = false;\n        emit AdminRemoved(_admin);\n    }\n\n    function addDocument(\n        address user,\n        string calldata cid,\n        uint256 unlockTime,\n        uint256 price,\n        address[] calldata recipients,\n        bool encrypted,\n        string calldata filename\n    ) external onlyAdmin {\n        uint256 index = documentCount[user] + 1;\n        documents[user][index] = Document({\n            docName: filename,\n            owner: user,\n            cid: cid,\n            unlockTime: unlockTime,\n            price: price,\n            sharedRecipients: recipients,\n            encrypted: encrypted\n        });\n\n        documentCount[user] = index;\n\n        emit DocumentAdded(filename, cid, user);\n    }\n\n    function getDocument(\n        address user,\n        uint256 index\n    ) external view returns (Document memory) {\n        if (index == 0 || index > documentCount[user]) revert InvalidDocument();\n        return documents[user][index];\n    }\n\n    function getDocumentCount(address user) external view returns (uint256) {\n        return documentCount[user];\n    }\n\n    function setUsername(string calldata username) external {\n        if (bytes(username).length == 0) revert UsernameCannotBeEmpty();\n        if (usernameToAddress[username] != address(0)) revert UsernameTaken();\n\n        string memory oldUsername = usernames[msg.sender];\n        bool usernameExist = bytes(oldUsername).length > 0;\n        if (usernameExist) {\n            delete usernameToAddress[oldUsername];\n            emit UsernameSetAndUpdated(msg.sender, username);\n        } else {\n            emit UsernameSetAndCreated(msg.sender, username);\n        }\n\n        usernames[msg.sender] = username;\n        usernameToAddress[username] = msg.sender;\n    }\n\n    function shareDocumentAccess(\n        address user,\n        uint256 documentId,\n        address recipient\n    ) external onlyAdmin {\n        Document storage doc = documents[user][documentId];\n        if (documentId == 0 || documentId > documentCount[user])\n            revert InvalidDocument();\n\n        // Check if recipient already has access\n        bool alreadyShared = false;\n        for (uint256 i = 0; i < doc.sharedRecipients.length; i++) {\n            if (doc.sharedRecipients[i] == recipient) {\n                alreadyShared = true;\n                break;\n            }\n        }\n\n        if (!alreadyShared) {\n            doc.sharedRecipients.push(recipient);\n        }\n\n        emit ShareAccess(user, doc.cid, usernames[recipient], recipient);\n    }\n\n    function revokeDocumentAccess(\n        address user,\n        uint256 documentId,\n        address revokeAdd\n    ) external onlyAdmin {\n        Document storage doc = documents[user][documentId];\n        if (documentId == 0 || documentId > documentCount[user])\n            revert InvalidDocument();\n\n        uint256 len = doc.sharedRecipients.length;\n        for (uint256 i = 0; i < len; i++) {\n            if (doc.sharedRecipients[i] == revokeAdd) {\n                // Swap with last element and pop\n                doc.sharedRecipients[i] = doc.sharedRecipients[len - 1];\n                doc.sharedRecipients.pop();\n                break;\n            }\n        }\n\n        emit AccessRevoked(user, doc.cid, usernames[revokeAdd], revokeAdd);\n    }\n}\n"
+      }
+    }
+  }
+}

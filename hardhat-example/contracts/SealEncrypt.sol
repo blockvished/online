@@ -14,17 +14,40 @@ contract SealEncrypt {
         address owner;
         uint256 unlockTime;
         uint256 price;
-        address[] sharedRecipients;
         bool encrypted;
+        address[] sharedRecipients;
     }
 
-    mapping(address => mapping(uint256 => Document)) public documents;
-    mapping(address => uint256) public documentCount;
+    mapping(address => mapping(uint256 => Document)) private documents;
+    mapping(address => uint256) private documentCount;
 
     event AdminAdded(address indexed admin);
     event AdminRemoved(address indexed admin);
-    event CIDAdded(address indexed user, string cid, address indexed addedBy);
-    event UsernameSet(address indexed user, string username);
+    event DocumentAdded(string addedBy, string cid, address indexed user);
+    event ShareAccess(
+        address indexed user,
+        string cid,
+        string shareUser,
+        address shareAddr
+    );
+    event AccessRevoked(
+        address indexed user,
+        string cid,
+        string Revokeuser,
+        address RevokeAddr
+    );
+
+    event UsernameSetAndUpdated(address indexed user, string username);
+    event UsernameSetAndCreated(address indexed user, string username);
+
+    error NotOwner();
+    error NotAdmin();
+    error AlreadyAdmin();
+    error NotAnAdmin();
+    error InvalidDocument();
+
+    error UsernameTaken();
+    error UsernameCannotBeEmpty();
 
     constructor() {
         owner = msg.sender;
@@ -33,23 +56,25 @@ contract SealEncrypt {
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Not contract owner");
+        if (msg.sender != owner) revert NotOwner();
         _;
     }
 
     modifier onlyAdmin() {
-        require(isAdmin[msg.sender], "Not an admin");
+        if (!isAdmin[msg.sender]) revert NotAdmin();
         _;
     }
 
     function addAdmin(address _admin) external onlyOwner {
-        require(!isAdmin[_admin], "Already an admin");
+        if (isAdmin[_admin]) revert AlreadyAdmin();
+
         isAdmin[_admin] = true;
         emit AdminAdded(_admin);
     }
 
     function removeAdmin(address _admin) external onlyOwner {
-        require(isAdmin[_admin], "Not an admin");
+        if (!isAdmin[_admin]) revert NotAnAdmin();
+
         isAdmin[_admin] = false;
         emit AdminRemoved(_admin);
     }
@@ -76,17 +101,14 @@ contract SealEncrypt {
 
         documentCount[user] = index;
 
-        emit CIDAdded(user, cid, msg.sender);
+        emit DocumentAdded(filename, cid, user);
     }
 
     function getDocument(
         address user,
         uint256 index
     ) external view returns (Document memory) {
-        require(
-            index > 0 && index <= documentCount[user],
-            "Invalid document index"
-        );
+        if (index == 0 || index > documentCount[user]) revert InvalidDocument();
         return documents[user][index];
     }
 
@@ -95,20 +117,66 @@ contract SealEncrypt {
     }
 
     function setUsername(string calldata username) external {
-        require(bytes(username).length > 0, "Username cannot be empty");
-        require(
-            usernameToAddress[username] == address(0),
-            "Username already taken"
-        );
+        if (bytes(username).length == 0) revert UsernameCannotBeEmpty();
+        if (usernameToAddress[username] != address(0)) revert UsernameTaken();
 
         string memory oldUsername = usernames[msg.sender];
-        if (bytes(oldUsername).length > 0) {
+        bool usernameExist = bytes(oldUsername).length > 0;
+        if (usernameExist) {
             delete usernameToAddress[oldUsername];
+            emit UsernameSetAndUpdated(msg.sender, username);
+        } else {
+            emit UsernameSetAndCreated(msg.sender, username);
         }
 
         usernames[msg.sender] = username;
         usernameToAddress[username] = msg.sender;
+    }
 
-        emit UsernameSet(msg.sender, username);
+    function shareDocumentAccess(
+        address user,
+        uint256 documentId,
+        address recipient
+    ) external onlyAdmin {
+        Document storage doc = documents[user][documentId];
+        if (documentId == 0 || documentId > documentCount[user])
+            revert InvalidDocument();
+
+        // Check if recipient already has access
+        bool alreadyShared = false;
+        for (uint256 i = 0; i < doc.sharedRecipients.length; i++) {
+            if (doc.sharedRecipients[i] == recipient) {
+                alreadyShared = true;
+                break;
+            }
+        }
+
+        if (!alreadyShared) {
+            doc.sharedRecipients.push(recipient);
+        }
+
+        emit ShareAccess(user, doc.cid, usernames[recipient], recipient);
+    }
+
+    function revokeDocumentAccess(
+        address user,
+        uint256 documentId,
+        address revokeAdd
+    ) external onlyAdmin {
+        Document storage doc = documents[user][documentId];
+        if (documentId == 0 || documentId > documentCount[user])
+            revert InvalidDocument();
+
+        uint256 len = doc.sharedRecipients.length;
+        for (uint256 i = 0; i < len; i++) {
+            if (doc.sharedRecipients[i] == revokeAdd) {
+                // Swap with last element and pop
+                doc.sharedRecipients[i] = doc.sharedRecipients[len - 1];
+                doc.sharedRecipients.pop();
+                break;
+            }
+        }
+
+        emit AccessRevoked(user, doc.cid, usernames[revokeAdd], revokeAdd);
     }
 }
