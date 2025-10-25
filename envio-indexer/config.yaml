@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: envio-indexer
+networks:
+- id: 11155111
+  start_block: 0
+  contracts:
+  - name: SealEncrypt
+    address:
+    - 0x871395f42AD3dd854EbBd29940e737282bc3395E
+    handler: src/EventHandlers.ts
+    events:
+    - event: AccessRevoked(address indexed user, string cid, string Revokeuser, address RevokeAddr)
+    - event: AdminAdded(address indexed admin)
+    - event: AdminRemoved(address indexed admin)
+    - event: DocumentAdded(string addedBy, string cid, address indexed user)
+    - event: ShareAccess(address indexed user, string cid, string shareUser, address shareAddr)
+    - event: UsernameSetAndCreated(address indexed user, string username)
+    - event: UsernameSetAndUpdated(address indexed user, string username)
+unordered_multichain_mode: true
+preload_handlers: true

@@ -1,0 +1,45 @@
+type SealEncrypt_AccessRevoked {
+  id: ID!
+  user: String!
+  cid: String!
+  revokeuser: String!
+  revokeAddr: String!
+}
+
+type SealEncrypt_AdminAdded {
+  id: ID!
+  admin: String!
+}
+
+type SealEncrypt_AdminRemoved {
+  id: ID!
+  admin: String!
+}
+
+type SealEncrypt_DocumentAdded {
+  id: ID!
+  addedBy: String!
+  cid: String!
+  user: String!
+}
+
+type SealEncrypt_ShareAccess {
+  id: ID!
+  user: String!
+  cid: String!
+  shareUser: String!
+  shareAddr: String!
+}
+
+type SealEncrypt_UsernameSetAndCreated {
+  id: ID!
+  user: String!
+  username: String!
+}
+
+type SealEncrypt_UsernameSetAndUpdated {
+  id: ID!
+  user: String!
+  username: String!
+}
+

@@ -50,7 +50,7 @@ export const useDocumentCount = () => {
   return useContractRead({
     address: CONTRACT_ADDRESS,
     abi: SEAL_ENCRYPT_ABI,
-    functionName: "documentCount",
+    functionName: "getDocumentCount",
     args: [address as Address],
     query: {
       enabled: isConnected && !!CONTRACT_ADDRESS && !!address,
