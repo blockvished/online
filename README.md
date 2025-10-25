@@ -18,6 +18,7 @@
 - **Storage:** IPFS (encrypted via Lighthouse sdk)
 - **Utilities:** Wagmi, Viem, RainbowKit for wallet and contract interactions
 - **Indexer:** Envio for real-time blockchain data indexing
+- **Free LLMs** Usage of free llms to make the frontend like Chatgpt, Claude, and Gemini Flash
 
 ---
 
@@ -31,15 +32,17 @@ npx hardhat build
 npx hardhat test
 ```
 
-### Deploy Smart Contracts
+### Store private key securely and deploy Smart Contracts
 
 ```bash
+npx hardhat keystore set SEPOLIA_PRIVATE_KEY
 npx hardhat ignition deploy --network sepolia ignition/modules/SealEncrypt.ts
 ```
 
-### Verify Smart Contracts
+### Update etherscan api key in .env.example and verify Smart Contracts
 
 ```bash
+mv .env.example .env
 npx hardhat verify --network sepolia <CONTRACT_ADDRESS>
 ```
 
@@ -52,6 +55,8 @@ cd envio-indexer
 npm install
 npm run dev
 ```
+
+once done close the envio indexer using `npx envio stop`
 
 ---
 
