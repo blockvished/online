@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   {!isDocCountLoading && docCountValue > 0 ? (
                     <Link
-                      href="/decrypt"
+                      href="/documents"
                       className="block w-full text-center text-lg font-bold text-blue-300 bg-blue-900/30 hover:bg-blue-800/50 py-3 px-4 rounded-xl transition-colors ring-2 ring-blue-500/50 hover:ring-blue-400/70"
                     >
                       View Your {docCountValue} Document
