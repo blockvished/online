@@ -13,6 +13,7 @@ export default function Navbar() {
     { href: "/upload", label: "Upload" },
     { href: "/documents", label: "Yor SealEncrypts" },
     { href: "/decrypt", label: "Decrypt Shared" },
+    { href: "/tx-logs", label: "Recent Tx Log" },
   ];
 
   return (

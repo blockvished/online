@@ -23,6 +23,7 @@ import {
 // -------------------------------------------------------------
 
 interface ActionInputModalProps {
+  index: Number;
   action: "Share" | "Revoke";
   docName: string;
   cid: string;
@@ -47,6 +48,7 @@ function useDebounce<T>(value: T, delay: number): T {
 }
 
 export const ActionInputModal = ({
+  index,
   action,
   docName,
   cid,
@@ -206,6 +208,28 @@ export const ActionInputModal = ({
       const actionFn =
         action === "Share" ? shareEncryptedFile : revokeEncryptedFile;
       await actionFn(cid, userAddress, recipientAddress, signedMsg);
+
+      const response = await fetch("/api/share-access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userAddress,
+          documentId: index,
+          recipientAddress: cleanInput, // or recipientAddress if already set
+          action: action.toLowerCase(), // 'share' or 'revoke'
+          signedMessage: signedMsg,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "API call failed");
+      }
+
+      console.log("API response:", data);
 
       setSuccess(true);
       setStatus(`✅ Success! ${action}d access for ${cleanInput}.`);

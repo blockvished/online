@@ -58,6 +58,7 @@ export const shareEncryptedFile = async (
     cid,
     signedMessage,
   );
+  // index
   return response.data;
 };
 

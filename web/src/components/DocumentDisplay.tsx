@@ -330,6 +330,7 @@ const GridActionModal = ({
   if (action) {
     return (
       <ActionInputModal
+        index={index}
         action={action}
         docName={docName}
         cid={cid}

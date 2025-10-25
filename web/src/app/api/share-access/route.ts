@@ -1,7 +1,16 @@
 // app/api/share-access/route.ts
 
 import { NextResponse } from "next/server";
+import { createPublicClient, createWalletClient, http, Address } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
+import { sepolia } from "viem/chains";
+import { SEAL_ENCRYPT_ABI } from "@/lib/contractAbi";
 import type { NextRequest } from "next/server";
+
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS as Address;
+const PRIVATE_KEY = process.env.PRIVATEKEY! as `0x${string}`;
+const RPC_URL = "https://ethereum-sepolia-rpc.publicnode.com";
+const TARGET_CHAIN = sepolia;
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,13 +50,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Add your Lighthouse logic here
-    // import { shareEncryptedFile, revokeEncryptedFile } from '@/lib/lighthouse';
-    // if (action === 'share') {
-    //   result = await shareEncryptedFile(documentId, userAddress, recipientAddress, signedMessage);
-    // } else {
-    //   result = await revokeEncryptedFile(documentId, userAddress, recipientAddress, signedMessage);
-    // }
+    if (!CONTRACT_ADDRESS || !PRIVATE_KEY || !RPC_URL) {
+      console.error(
+        "Missing environment variables: Contract Address, Private Key, or RPC URL.",
+      );
+      return NextResponse.json(
+        { message: "Server configuration error." },
+        { status: 500 },
+      );
+    }
+
+    // Viem setup
+    const deployerAccount = privateKeyToAccount(PRIVATE_KEY);
+    const publicClient = createPublicClient({
+      chain: TARGET_CHAIN,
+      transport: http(RPC_URL),
+    });
+    const walletClient = createWalletClient({
+      account: deployerAccount,
+      chain: TARGET_CHAIN,
+      transport: http(RPC_URL),
+    });
+
+    // Prepare args
+    const args: [Address, bigint, Address] = [
+      userAddress as Address,
+      BigInt(documentId), // <-- convert to bigint
+      recipientAddress as Address,
+    ];
+
+    const functionName =
+      action === "share" ? "shareDocumentAccess" : "revokeDocumentAccess";
+
+    console.log(`Calling contract function: ${functionName} with args`, args);
+
+    // Simulate
+    const { request: writeRequest } = await publicClient.simulateContract({
+      address: CONTRACT_ADDRESS,
+      abi: SEAL_ENCRYPT_ABI,
+      functionName,
+      args,
+      account: deployerAccount,
+    });
+
+    console.log("Simulation successful. Sending transaction...");
+
+    const txHash = await walletClient.writeContract(writeRequest);
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash,
+    });
+
+    console.log(`Transaction Mined. Status: ${receipt.status}`);
 
     return NextResponse.json({
       success: true,
