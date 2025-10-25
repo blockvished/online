@@ -10,18 +10,10 @@ import { defineChain } from "viem";
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!;
 
-const yellowChain = defineChain({
-  id: 42069, // replace with actual Yellow chainId
-  name: "Yellow Testnet",
-  network: "yellow",
-  nativeCurrency: { name: "ETH", symbol: "YETH", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.yellow.network"] } },
-});
-
 const config = getDefaultConfig({
   appName: "My RainbowKit App",
   projectId,
-  chains: [sepolia, yellowChain, hardhat],
+  chains: [sepolia, hardhat],
   ssr: true, // If your dApp uses server side rendering (SSR)
 });
 
