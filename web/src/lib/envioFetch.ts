@@ -1,6 +1,5 @@
-// lib/envioFetch.ts
-
-const ENDPOINT = "http://localhost:8080/v1/graphql";
+const ENDPOINT =
+  String(process.env.ENVIO_ENDPOINT) || "http://localhost:8080/v1/graphql";
 
 // Define the shape of the data we expect from the Envio indexer
 export interface EnvioData {
