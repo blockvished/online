@@ -234,21 +234,9 @@ export default function EnvioDashboard() {
           </h1>
           <p className="text-gray-400">
             Could not connect to or fetch data from the Envio indexer endpoint
-            at
-            <code className="block mt-2 text-sm text-red-300 bg-gray-800 p-2 rounded">
-              http://localhost:8080/v1/graphql
-            </code>
           </p>
           <p className="mt-4 text-red-300 text-sm font-mono break-words">
             Error details: {error || "No data received."}
-          </p>
-          <p className="mt-6 text-sm text-gray-500">
-            <span className="font-semibold text-red-200">Action Required:</span>{" "}
-            Ensure your Envio indexer is running locally with{" "}
-            <code className="bg-gray-800 p-1 rounded text-cyan-400">
-              envio start
-            </code>
-            .
           </p>
         </motion.div>
         {/* Error Glow */}

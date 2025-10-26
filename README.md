@@ -7,7 +7,8 @@
 ## 🌐 Deployment Links
 
 - **Smart Contract (Sepolia):** [View on Etherscan ↗](https://sepolia.etherscan.io/address/0x871395f42AD3dd854EbBd29940e737282bc3395E)
-- **Web App:** [seal-encrypt.vercel.app ↗](https://seal-encrypt.vercel.app)
+- **Web App:** [Seal Encrypt ↗](https://seal-encrypt.vercel.app)
+- **Envio Indexer:** [Envio indexer ↗](https://indexer.dev.hyperindex.xyz/665a790/v1/graphql)
 
 ---
 

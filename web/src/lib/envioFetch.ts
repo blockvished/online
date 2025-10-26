@@ -1,6 +1,5 @@
 // const ENDPOINT = String(process.env.ENVIO_ENDPOINT) || "http://localhost:8080/v1/graphql";
-const ENDPOINT =
-  process.env.ENVIO_ENDPOINT || "http://localhost:8080/v1/graphql";
+const ENDPOINT = "https://indexer.dev.hyperindex.xyz/e6b1e5d/v1/graphql";
 
 // Define the shape of the data we expect from the Envio indexer
 export interface EnvioData {
