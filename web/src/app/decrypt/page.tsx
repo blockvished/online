@@ -3,24 +3,22 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useAccount, useWalletClient } from "wagmi";
-import lighthouse from "@lighthouse-web3/sdk"; // Ensure lighthouse is imported
+import lighthouse from "@lighthouse-web3/sdk";
 import { getSignedMessage, decryptEncryptedFile } from "@/lib/lighthouse";
 import {
   Loader2,
   CheckCircle,
   XCircle,
   KeyRound,
-  ExternalLink,
   Download,
+  FileText,
 } from "lucide-react";
 
-// Define the expected structure of file info from Lighthouse
 interface LighthouseFileInfo {
   cid: string;
   fileName: string;
   fileSizeInBytes: string;
   mimeType: string;
-  // Add other properties if needed
 }
 
 export default function DecryptPage() {
@@ -29,10 +27,12 @@ export default function DecryptPage() {
 
   const [cid, setCid] = useState("");
   const [fileUrl, setFileUrl] = useState<string | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null); // NEW STATE for filename
+  const [fileName, setFileName] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [decrypted, setDecrypted] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const handleDecrypt = async () => {
     if (!cid) {
@@ -43,21 +43,20 @@ export default function DecryptPage() {
       setError("Please connect your wallet.");
       return;
     }
+
     try {
       setError("");
       setFileUrl(null);
-      setFileName(null); // Reset filename
+      setFileName(null);
+      setDecrypted(false);
       setLoading(true);
 
-      // --- Step 1: Get signature ---
       setStatus("Signing message with wallet...");
       const signedMsg = await getSignedMessage(userAddress, walletClient);
 
-      // --- Step 2: Decrypt file and get temporary access URL ---
       setStatus("Decrypting the file...");
       const url = await decryptEncryptedFile(cid, userAddress, signedMsg);
 
-      // --- Step 3: Fetch file metadata (including name) ---
       setStatus("Fetching file metadata...");
       let fetchedFileName = "decrypted_file";
       try {
@@ -65,16 +64,13 @@ export default function DecryptPage() {
           await lighthouse.getFileInfo(cid);
         fetchedFileName = infoResponse.data.fileName;
       } catch (infoError) {
-        console.warn(
-          "Could not fetch file info for name suggestion:",
-          infoError,
-        );
-        // Continue even if name fetch fails, using the default name
+        console.warn("Could not fetch file info:", infoError);
       }
 
       setFileUrl(url);
-      setFileName(fetchedFileName); // Set the fetched name
-      setStatus("File decrypted successfully! Access link generated.");
+      setFileName(fetchedFileName);
+      setDecrypted(true);
+      setStatus("File decrypted successfully!");
     } catch (err: any) {
       console.error(err);
 
@@ -89,7 +85,6 @@ export default function DecryptPage() {
         displayError = err.data.message;
       }
 
-      // Custom message for access issues
       if (displayError.toLowerCase().includes("no access")) {
         displayError = "You do not have access permission for this file.";
       }
@@ -97,6 +92,31 @@ export default function DecryptPage() {
       setError(displayError);
       setFileUrl(null);
       setFileName(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!fileUrl) return;
+
+    try {
+      setDownloading(true);
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName || "decrypted_file";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      setError("Download failed. Please try again.");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -140,20 +160,76 @@ export default function DecryptPage() {
                 disabled={loading}
               />
 
-              <button
-                onClick={handleDecrypt}
-                disabled={loading || !cid}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-600/30 hover:opacity-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transform hover:scale-[1.01]"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin mr-3" />
-                    {status.split("...").pop() || "Processing..."}
-                  </>
-                ) : (
-                  "Initiate Decryption"
-                )}
-              </button>
+              {!decrypted ? (
+                <button
+                  onClick={handleDecrypt}
+                  disabled={loading || !cid}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-purple-600/30 hover:opacity-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transform hover:scale-[1.01]"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-3" />
+                      Decrypting...
+                    </>
+                  ) : (
+                    <>
+                      <KeyRound className="w-5 h-5 mr-2" />
+                      Decrypt File
+                    </>
+                  )}
+                </button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="w-full space-y-4"
+                >
+                  <div className="flex items-center justify-center gap-2 text-green-400 font-bold py-3 bg-green-900/20 border border-green-500/30 rounded-xl">
+                    <CheckCircle className="w-5 h-5" /> Decryption Successful!
+                  </div>
+
+                  {fileName && (
+                    <div className="flex items-center gap-2 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+                      <FileText className="w-5 h-5 text-cyan-400" />
+                      <span className="text-sm text-gray-300 font-medium truncate">
+                        {fileName}
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-green-600/30 hover:opacity-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {downloading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-5 h-5 mr-2" />
+                        Download Decrypted File
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setCid("");
+                      setFileUrl(null);
+                      setFileName(null);
+                      setDecrypted(false);
+                      setError("");
+                      setStatus("");
+                    }}
+                    className="w-full bg-gray-700/50 text-gray-300 font-semibold py-2 rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                  >
+                    Decrypt Another File
+                  </button>
+                </motion.div>
+              )}
 
               {loading && (
                 <div className="w-full text-center p-3 border border-gray-700 rounded-lg bg-gray-800/50">
@@ -163,51 +239,9 @@ export default function DecryptPage() {
 
               {error && (
                 <div className="w-full flex items-center p-3 gap-3 bg-red-900/30 border border-red-600/50 rounded-lg text-red-400 text-sm">
-                  <XCircle className="w-5 h-5 flex-shrink-0" />{" "}
+                  <XCircle className="w-5 h-5 flex-shrink-0" />
                   <span className="break-words">{error}</span>
                 </div>
-              )}
-
-              {fileUrl && !loading && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="w-full text-center space-y-4 pt-4 border-t border-gray-700/50"
-                >
-                  <div className="flex items-center justify-center gap-2 text-green-400 font-bold">
-                    <CheckCircle className="w-5 h-5" /> Decryption Successful!
-                  </div>
-
-                  {fileName && (
-                    <p className="text-sm text-gray-300 font-medium">
-                      File:{" "}
-                      <span className="text-white font-mono">{fileName}</span>
-                    </p>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                    {/* View File Button (Opens in new tab, no force download) */}
-                    <a
-                      href={fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-center bg-cyan-600/70 text-white px-4 py-2 rounded-lg font-semibold hover:bg-cyan-600 transition-colors shadow-lg shadow-cyan-500/20 text-sm"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View Decrypted File
-                    </a>
-
-                    {/* Download Button (Forces download with the fetched filename) */}
-                    <a
-                      href={fileUrl}
-                      download={fileName || "decrypted_file"} // USE fileName HERE
-                      className="flex items-center justify-center bg-gray-600/50 text-gray-300 px-4 py-2 rounded-lg font-semibold hover:bg-gray-600/70 transition-colors text-sm"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download File
-                    </a>
-                  </div>
-                </motion.div>
               )}
             </div>
           )}
