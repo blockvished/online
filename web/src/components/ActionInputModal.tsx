@@ -209,6 +209,8 @@ export const ActionInputModal = ({
         action === "Share" ? shareEncryptedFile : revokeEncryptedFile;
       await actionFn(cid, userAddress, recipientAddress, signedMsg);
 
+      console.log("reciepientsljfjlasjlfjaslgf", recipientAddress);
+
       const response = await fetch("/api/share-access", {
         method: "POST",
         headers: {
@@ -217,7 +219,7 @@ export const ActionInputModal = ({
         body: JSON.stringify({
           userAddress,
           documentId: index,
-          recipientAddress: cleanInput, // or recipientAddress if already set
+          recipientAddress: recipientAddress, // or recipientAddress if already set
           action: action.toLowerCase(), // 'share' or 'revoke'
           signedMessage: signedMsg,
         }),
