@@ -47,6 +47,7 @@ const CopyButton: React.FC<{ value: string }> = ({ value }) => {
 };
 
 // Helper component to render a single table of event data
+// Helper component to render a single table of event data
 const DataTable: React.FC<{ title: string; data: any[] }> = ({
   title,
   data,
@@ -88,11 +89,38 @@ const DataTable: React.FC<{ title: string; data: any[] }> = ({
   const isExpandable = totalEvents > MAX_ROWS_INITIAL;
   const hiddenCount = totalEvents - MAX_ROWS_INITIAL;
 
-  // Truncation logic (same as before)
-  const truncate = (value: any) => {
+  // --- MODIFIED TRUNCATION LOGIC ---
+  const truncate = (value: any, key: string) => {
     const str = String(value);
+    const lowerKey = key.toLowerCase();
+
+    // Custom Truncation for CID (first 4, last 4)
+    if (lowerKey.includes("cid")) {
+      if (str.length > 8) {
+        return `${str.substring(0, 4)}...${str.substring(str.length - 4)}`;
+      }
+      return str; // If less than 8 characters, don't truncate
+    }
+
+    // Custom Truncation for Addresses (first 3, last 4)
+    const isAddress =
+      lowerKey.includes("user") ||
+      lowerKey.includes("admin") ||
+      lowerKey.includes("address") ||
+      lowerKey.includes("addr") ||
+      lowerKey.includes("shareuser");
+
+    if (isAddress) {
+      if (str.length > 7) {
+        return `${str.substring(0, 3)}...${str.substring(str.length - 4)}`;
+      }
+      return str; // If less than 7 characters, don't truncate
+    }
+
+    // Default truncation for other long fields (Original: first 8, then ...)
     return str.length > 20 ? `${str.substring(0, 8)}...` : str;
   };
+  // ---------------------------------
 
   // Check if a field is copyable (CID or address-like fields)
   const isCopyableField = (key: string) => {
@@ -127,7 +155,9 @@ const DataTable: React.FC<{ title: string; data: any[] }> = ({
 
       {/* Table Container - Limited height when not expanded */}
       <div
-        className={`overflow-x-auto flex-grow ${!isExpanded && isExpandable ? "max-h-[300px]" : ""}`}
+        className={`overflow-x-auto flex-grow ${
+          !isExpanded && isExpandable ? "max-h-[300px]" : ""
+        }`}
       >
         <table className="min-w-full divide-y divide-gray-700 text-sm">
           <thead className="bg-gray-800/70 sticky top-0 z-10">
@@ -157,7 +187,8 @@ const DataTable: React.FC<{ title: string; data: any[] }> = ({
                     className="px-6 py-3 whitespace-nowrap text-gray-300 font-mono text-xs"
                   >
                     <div className="flex items-center">
-                      {truncate(row[key])}
+                      {/* CALLING TRUNCATE WITH THE KEY */}
+                      {truncate(row[key], key)}
                       {isCopyableField(key) &&
                         row[key] &&
                         String(row[key]).trim() !== "" && (
