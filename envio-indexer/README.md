@@ -16,7 +16,7 @@ Visit http://localhost:8080 to see the GraphQL Playground, local password is `te
 pnpm codegen
 ```
 
-### Pre-requisites
+### Pre-requisite
 
 - [Node.js (use v18 or newer)](https://nodejs.org/en/download/current)
 - [pnpm (use v8 or newer)](https://pnpm.io/installation)
